@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+  <!-- Load React. -->
+  <!-- Note: when deploying, replace "development.js" with "production.min.js". -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://cdn.socket.io/4.4.1/socket.io.min.js" integrity="sha384-fKnu0iswBIqkjxrhQCTZ7qlLHOFEgNkRmK2vaO/LbTZSXdJfAu6ewRBdwHPhBo/H" crossorigin="anonymous"></script>
+  <meta charset="UTF-8">
+    <title>Title</title>
+  <script type="text/babel">
+    function run(component){
+      const e = React.createElement;
+      const domContainer = document.querySelector('#root');
+      const root = ReactDOM.createRoot(domContainer);
+      class App extends React.Component {
+        constructor(props) {
+          super(props);
+        }
+        render() {
+          return (component);
+        }
+      }
+      root.render(e(App));
+    }
+    function MyComponent(props){
+      const [data, setData] = React.useState(0);
+      const [room, setRoom] = React.useState("PortalA");
+      const [message, setMessage] = React.useState(null);
+      const [socket, setSocket] = React.useState(null);
+
+      React.useEffect(() => {
+        setInterval(() => {
+          setData(p => p + 1);
+        }, [1000])
+      }, []);
+      React.useEffect(() => {
+        const socket = io("http://localhost:3456");
+        socket.on("connect", () => {
+          console.log("connect", socket.connected); // true
+        });
+
+        socket.on("disconnect", () => {
+          console.log("disconnect", socket.connected); // false
+        });
+
+        socket.on("server-state", function (message){
+          console.log("server-state", message); // true
+        })
+
+        socket.on("message", function (message){
+          console.log("message", message); // true
+        })
+
+        setSocket(socket);
+      }, []);
+      return (
+              <div>
+                <div>
+                  prtl - {socket && socket.id || "not connected"} - {data}
+                </div>
+                <input id={"room"} value={room} onChange={(e) => {
+                  setRoom(e.target.value);
+                }}></input>
+                <button onClick={() => {
+                  if(socket.connected){
+                    socket.emit("join", room);
+                  } else {
+                    alert("not connected")
+                  }
+                }}>join {room}</button>
+
+                <input id={"message"} onChange={(e) => {
+                  setMessage(e.target.value);
+                }}></input>
+                <button onClick={() => {
+                  if(socket.connected){
+                    socket.emit("message", message);
+                  } else {
+                    alert("not connected")
+                  }
+                }}>send message</button>
+              </div>
+      );
+    }
+    run(<MyComponent></MyComponent>);
+  </script>
+</head>
+<body>
+<div id="root">
+
+</div>
+</body>
+</html>
