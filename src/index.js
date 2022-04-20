@@ -66,6 +66,7 @@ function Main(){
         this.fps = 60;
         this.state = {}
         this.portalTokens = {}
+        this.verificationMap = {}
 
         setInterval(() => {
             Object.keys(this.portals.getPortals()).forEach(portal => {
@@ -99,6 +100,7 @@ function Main(){
                 delete this.sockets[socket.id];
                 delete this.state[socket.id];
                 delete this.portalTokens[socket.id];
+                delete this.verificationMap[socket.id];
                 ll.debug(`socket ${socket.id}: ${Object.keys(this.sockets).length} connections active`);
             })
             socket.on("disconnecting", () => {
@@ -113,7 +115,8 @@ function Main(){
                 })
             })
             socket.on("join", (...args) => {
-                if(this.portals.getPortals()[args[0]]){
+                let isAuthenticated = this.verificationMap[`${socket.id}`];
+                if(isAuthenticated && this.portals.getPortals()[args[0]]){
                     let rooms = socket.rooms;
                     rooms.forEach(room => {
                         ll.debug(`socket ${socket.id}: leaving room ${room}`);
@@ -126,21 +129,27 @@ function Main(){
                 }
             });
             // handle authentication messages
-            socket.on("message", (message) => {
+            socket.on("message", (message, callback = () => {}) => {
                 // ll.debug(`socket ${socket.id}: got message "${JSON.stringify(message)}"`);
                 if(message.type === "player-position"){
-                    this.state[`${socket.id}`] = {
-                        "player-position": message.payload
-                    };
+                    let isAuthenticated = this.verificationMap[`${socket.id}`];
+                    if(isAuthenticated){
+                        this.state[`${socket.id}`] = {
+                            "player-position": message.payload
+                        };
+                    }
+                    callback();
                 } else if(message.type === "player-set-portal-token"){
                     ll.debug(`socket ${socket.id}: got message`, message);
                     // set an authentication token for this socket connection
                     this.portalTokens[`${socket.id}`] = message.payload.portalToken;
-                    // verify the message signature
+                    callback();
                 } else if(message.type === "player-verify-portal-token"){
+                    // verify the message signature
                     ll.debug(`socket ${socket.id}: got message`, message);
                     // set an authentication token for this socket connection
                     let portalToken = this.portalTokens[`${socket.id}`];
+                    this.verificationMap[`${socket.id}`] = false;
                     // verify the message signature
                     /*gameServerSocket.emit("api", {
                         requestType: "getstate"
@@ -163,9 +172,12 @@ function Main(){
                         ll.debug(`socket ${gameServerSocket.id}: api:verify response`, response);
                         if(response.verifies){
                             ll.debug(`socket ${gameServerSocket.id}: api:verify - ok`, response.verifies);
+                            this.verificationMap[`${socket.id}`] = true;
                         } else {
                             ll.debug(`socket ${gameServerSocket.id}: api:verify - not ok`, response.verifies);
+                            this.verificationMap[`${socket.id}`] = false;
                         }
+                        callback();
                     });
                 }
             })
