@@ -60,13 +60,12 @@ function Main(){
     this.sockets = {};
     this.portals = new Portals();
     this.run = function (){
-        this.portals.add("PortalA");
-        this.portals.add("PortalB");
-        this.portals.add("PortalC");
+        this.portals.add("global");
         this.fps = 60;
         this.state = {}
         this.portalTokens = {}
         this.verificationMap = {}
+        this.madaxGameState = null;
 
         setInterval(() => {
             Object.keys(this.portals.getPortals()).forEach(portal => {
@@ -95,6 +94,27 @@ function Main(){
             ll.debug(`socket ${socket.id}: connection`);
             this.sockets[socket.id] = socket;
             ll.debug(`socket ${socket.id}: ${Object.keys(this.sockets).length} connections active`);
+
+            //get the madax game state everytime a new player connects
+            gameServerSocket.emit("api", {
+                requestType: "getstate"
+            }, (response) => {
+                ll.debug(`socket ${gameServerSocket.id}: api:getstate response`, response);
+                this.madaxGameState = response;
+                let allPortals = [];
+                Object.keys(this.madaxGameState.playerItems).forEach(key => {
+                    let address = this.madaxGameState.playerItems[`${key}`].address;
+                    this.madaxGameState.playerItems[`${key}`].land.forEach(land => {
+                        let landLabel = land.features[0].properties.label;
+                        allPortals.push(`${landLabel}:${address}`)
+                    })
+                });
+                allPortals.forEach(portal => {
+                    this.portals.add(portal);
+                })
+                ll.debug(`available portals: ${JSON.stringify(this.portals.getPortals())}`);
+            });
+
             socket.on("disconnect", () => {
                 ll.debug(`socket ${socket.id}: disconnect (left rooms ${JSON.stringify(socket.rooms)})`);
                 delete this.sockets[socket.id];
@@ -151,11 +171,6 @@ function Main(){
                     let portalToken = this.portalTokens[`${socket.id}`];
                     this.verificationMap[`${socket.id}`] = false;
                     // verify the message signature
-                    /*gameServerSocket.emit("api", {
-                        requestType: "getstate"
-                    }, (response) => {
-                        ll.debug(`socket ${gameServerSocket.id}: api:getstate response`, response);
-                    });*/
                     gameServerSocket.emit("api", {
                         requestType: "verify",
                         payload: {
