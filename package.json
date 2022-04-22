@@ -5,7 +5,16 @@
   "main": "index.js",
   "scripts": {
     "dev": "cross-env PORT=3456 node src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "docker-build-production": "docker build --no-cache -f Dockerfile -t 141x-madax-gs:latest --build-arg build_env=production .",
+    "docker-build-development": "docker build --no-cache -f Dockerfile -t 141x-madax-gs:development --build-arg build_env=development .",
+    "docker-tag-production": "docker tag 141x-madax-gs:latest ggcaponetto/141x-madax-gs:latest",
+    "docker-tag-development": "docker tag 141x-madax-gs:development ggcaponetto/141x-madax-gs:development",
+    "docker-push-production": "docker image push ggcaponetto/141x-madax-gs:latest",
+    "docker-push-development": "docker image push ggcaponetto/141x-madax-gs:development",
+    "docker-run-production": "docker stop 141x-madax-gs || true && docker rm 141x-madax-gs || true || docker run --network host -d --name 141x-madax-gs -p 3456:3456 -d ggcaponetto/141x-madax-gs:latest .",
+    "docker-run-development": "docker stop 141x-madax-gs || true && docker rm 141x-madax-gs || true || docker run --network host -d --name 141x-madax-gs -p 3456:3456 -d ggcaponetto/141x-madax-gs:development .",
+    "docker-deploy": "npm run docker-build-production && npm run docker-tag-production && npm run docker-push-production"
   },
   "author": "",
   "license": "ISC",
