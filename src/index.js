@@ -36,6 +36,8 @@ const options = {
             'https://authorizer.141x-testnet.io',
             'https://meta.141x.io',
             'https://meta.141x-testnet.io',
+            'https://mportal.141x-testnet.io',
+            'https://mportalgs.141x-testnet.io',
             'https://mgs.ngrok.io',
             'https://mas.ngrok.io',
         ],
