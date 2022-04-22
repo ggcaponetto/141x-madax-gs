@@ -34,10 +34,14 @@ const options = {
             })(),
             'https://authorizer.141x.io',
             'https://authorizer.141x-testnet.io',
+            'https://game-server.141x.io',
+            'https://game-server.141x-testnet.io',
             'https://meta.141x.io',
             'https://meta.141x-testnet.io',
             'https://mportal.141x-testnet.io',
             'https://mportalgs.141x-testnet.io',
+            'https://mportal.141x.io',
+            'https://mportalgs.141x.io',
             'https://mgs.ngrok.io',
             'https://mas.ngrok.io',
         ],
@@ -87,6 +91,7 @@ function Main(){
             })[0];
         }
         // connect to the game server
+        ll.debug(`connecting to game server`, process.env.GAME_SERVER);
         let gameServerSocket = ioClient(process.env.GAME_SERVER);
         gameServerSocket.on("connect", () => {
             ll.debug(`gameserver socket connect`, gameServerSocket);

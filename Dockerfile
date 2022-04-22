@@ -15,7 +15,6 @@ COPY . /app
 RUN npm i
 
 ENV NODE_ENV $build_env
-ENV REACT_APP_BUILD_ENV $build_env
 
 RUN ls -lah
 RUN chmod a+x exec.sh
