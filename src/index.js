@@ -71,25 +71,28 @@ function Main(){
         this.state = {}
         this.portalTokens = {}
         this.verificationMap = {}
+        this.roomMap = {}
         this.madaxGameState = null;
 
         setInterval(() => {
-            Object.keys(this.portals.getPortals()).forEach(portal => {
+            Object.keys(this.sockets).forEach(socketId => {
+               let socket = this.sockets[`${socketId}`];
+                let playerRoom = this.roomMap[`${socket.id}`];
+                socket.rooms.forEach(room => {
+                    io.to(room).emit("server-state", {
+                        type: "state",
+                        payload: this.state
+                    })
+                })
+            });
+            /*Object.keys(this.portals.getPortals()).forEach(portal => {
                 io.to(portal).emit("server-state", {
                     type: "state",
                     payload: this.state
                 })
-            })
+            })*/
         }, 1000/this.fps)
 
-        this.getTokenByAddressAndPassword = function getTokenByAddressAndPassword(address, password){
-            return Object.keys(this.portalTokens).filter(key => {
-                return (
-                    this.portalTokens[`${key}`].address === address
-                    && this.portalTokens[`${key}`].password === password
-                )
-            })[0];
-        }
         // connect to the game server
         ll.debug(`connecting to game authorizer server`, process.env.GAME_AUTHORIZER_SERVER);
         let gameAuthorizerServerSocket = ioClient(process.env.GAME_AUTHORIZER_SERVER);
@@ -148,12 +151,14 @@ function Main(){
                 let isAuthenticated = this.verificationMap[`${socket.id}`];
                 if(isAuthenticated && this.portals.getPortals()[args[0]]){
                     let rooms = socket.rooms;
+                    this.roomMap[`${socket.id}`] = null;
                     rooms.forEach(room => {
                         ll.debug(`socket ${socket.id}: leaving room ${room}`);
                         socket.leave(room);
                     })
                     ll.debug(`socket ${socket.id}: joining room ${args[0]}`);
                     socket.join(args[0]);
+                    this.roomMap[`${socket.id}`] = args[0];
                 } else {
                     ll.debug(`socket ${socket.id}: room ${args[0]} doesn't exist`);
                 }
@@ -161,11 +166,17 @@ function Main(){
             // handle authentication messages
             socket.on("message", (message, callback = () => {}) => {
                 // ll.debug(`socket ${socket.id}: got message "${JSON.stringify(message)}"`);
+
+                let playerRoom = this.roomMap[`${socket.id}`];
+
                 if(message.type === "player-position"){
                     let isAuthenticated = this.verificationMap[`${socket.id}`];
                     if(isAuthenticated){
                         this.state[`${socket.id}`] = {
-                            "player-position": message.payload
+                            "player-position": {
+                                ...message.payload,
+                                room: playerRoom
+                            }
                         };
                     }
                     callback();
