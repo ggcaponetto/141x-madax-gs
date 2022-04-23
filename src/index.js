@@ -97,7 +97,7 @@ function Main(){
             ll.debug(`game authorizer server socket connect`, gameAuthorizerServerSocket.id);
         })
         gameAuthorizerServerSocket.on("connect_error", (err) => {
-            ll.error(`game authorizer server connect_error due to ${err.message}`);
+            ll.error(`game authorizer server connect_error due to ${err.message}`, err);
         });
 
         io.on("connection", (socket) => {
@@ -210,11 +210,12 @@ function Main(){
     }
 }
 
-let main = new Main();
-main.run();
 let port = process.env.PORT;
 httpServer.listen(port);
 ll.debug("madax-gs server is listening on port " + port);
+
+let main = new Main();
+main.run();
 
 //catches uncaught exceptions
 process.on('uncaughtException', (e) => {
