@@ -16,9 +16,9 @@ if (process.env.NODE_ENV === 'production') {
     ll.setLevel(ll.levels.DEBUG);
 }
 
-
-ll.debug(`connecting to game authorizer server`, "https://game-server.141x-testnet.io");
-let gameAuthorizerServerSocket = ioClient("https://game-server.141x-testnet.io");
+let url = "ws://141x-game-authorizer-server:5001"
+ll.debug(`connecting to game authorizer server`, url);
+let gameAuthorizerServerSocket = ioClient(url);
 gameAuthorizerServerSocket.on("connect", () => {
     ll.debug(`game authorizer server socket connect`, gameAuthorizerServerSocket.id);
 })

@@ -211,7 +211,7 @@ function Main(){
 }
 
 let port = process.env.PORT;
-httpServer.listen(port);
+httpServer.listen(port, '0.0.0.0');
 ll.debug("madax-gs server is listening on port " + port);
 
 let main = new Main();
