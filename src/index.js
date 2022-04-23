@@ -91,10 +91,10 @@ function Main(){
             })[0];
         }
         // connect to the game server
-        ll.debug(`connecting to game server`, process.env.GAME_SERVER);
-        let gameServerSocket = ioClient(process.env.GAME_SERVER);
-        gameServerSocket.on("connect", () => {
-            ll.debug(`gameserver socket connect`, gameServerSocket);
+        ll.debug(`connecting to game authorizer server`, process.env.GAME_AUTHORIZER_SERVER);
+        let gameAuthorizerServerSocket = ioClient(process.env.GAME_AUTHORIZER_SERVER);
+        gameAuthorizerServerSocket.on("connect", () => {
+            ll.debug(`gameserver socket connect`, gameAuthorizerServerSocket.id);
         })
 
         io.on("connection", (socket) => {
@@ -103,10 +103,10 @@ function Main(){
             ll.debug(`socket ${socket.id}: ${Object.keys(this.sockets).length} connections active`);
 
             //get the madax game state everytime a new player connects
-            gameServerSocket.emit("api", {
+            gameAuthorizerServerSocket.emit("api", {
                 requestType: "getstate"
             }, (response) => {
-                ll.debug(`socket ${gameServerSocket.id}: api:getstate response`, response);
+                ll.debug(`socket ${gameAuthorizerServerSocket.id}: api:getstate response`, response);
                 this.madaxGameState = response;
                 let allPortals = [];
                 Object.keys(this.madaxGameState.playerItems).forEach(key => {
@@ -178,7 +178,7 @@ function Main(){
                     let portalToken = this.portalTokens[`${socket.id}`];
                     this.verificationMap[`${socket.id}`] = false;
                     // verify the message signature
-                    gameServerSocket.emit("api", {
+                    gameAuthorizerServerSocket.emit("api", {
                         requestType: "verify",
                         payload: {
                             data: {
@@ -191,12 +191,12 @@ function Main(){
                             }
                         }
                     }, (response) => {
-                        ll.debug(`socket ${gameServerSocket.id}: api:verify response`, response);
+                        ll.debug(`socket ${gameAuthorizerServerSocket.id}: api:verify response`, response);
                         if(response.verifies){
-                            ll.debug(`socket ${gameServerSocket.id}: api:verify - ok`, response.verifies);
+                            ll.debug(`socket ${gameAuthorizerServerSocket.id}: api:verify - ok`, response.verifies);
                             this.verificationMap[`${socket.id}`] = true;
                         } else {
-                            ll.debug(`socket ${gameServerSocket.id}: api:verify - not ok`, response.verifies);
+                            ll.debug(`socket ${gameAuthorizerServerSocket.id}: api:verify - not ok`, response.verifies);
                             this.verificationMap[`${socket.id}`] = false;
                         }
                         callback();
