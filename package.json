@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node src/index.js",
     "dev": "cross-env PORT=3456 node src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node test/connection.js",
     "docker-build-production": "docker build --no-cache -f Dockerfile -t 141x-madax-gs:latest --build-arg build_env=production .",
     "docker-build-development": "docker build --no-cache -f Dockerfile -t 141x-madax-gs:development --build-arg build_env=development .",
     "docker-tag-production": "docker tag 141x-madax-gs:latest ggcaponetto/141x-madax-gs:latest",

@@ -94,8 +94,11 @@ function Main(){
         ll.debug(`connecting to game authorizer server`, process.env.GAME_AUTHORIZER_SERVER);
         let gameAuthorizerServerSocket = ioClient(process.env.GAME_AUTHORIZER_SERVER);
         gameAuthorizerServerSocket.on("connect", () => {
-            ll.debug(`gameserver socket connect`, gameAuthorizerServerSocket.id);
+            ll.debug(`game authorizer server socket connect`, gameAuthorizerServerSocket.id);
         })
+        gameAuthorizerServerSocket.on("connect_error", (err) => {
+            ll.error(`game authorizer server connect_error due to ${err.message}`);
+        });
 
         io.on("connection", (socket) => {
             ll.debug(`socket ${socket.id}: connection`);
