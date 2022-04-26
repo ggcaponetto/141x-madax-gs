@@ -105,12 +105,15 @@ function Main(){
         this.portals.add("global");
         this.fps = 60;
         this.state = {}
+        this.stateInternal = {}
         this.portalTokens = {}
         this.verificationMap = {}
         this.roomMap = {}
         this.madaxGameState = null;
+        this.serverTickCount = 0;
 
         setInterval(() => {
+            this.serverTickCount = this.serverTickCount + 1;
             Object.keys(this.sockets).forEach(socketId => {
                let socket = this.sockets[`${socketId}`];
                 let playerRoom = this.roomMap[`${socket.id}`];
@@ -167,6 +170,7 @@ function Main(){
                 let playerRoom = this.roomMap[`${socket.id}`];
                 delete this.sockets[socket.id];
                 delete this.state[playerRoom][socket.id];
+                delete this.stateInternal[playerRoom][socket.id];
                 delete this.portalTokens[socket.id];
                 delete this.verificationMap[socket.id];
                 ll.debug(`socket ${socket.id}: ${Object.keys(this.sockets).length} connections active`);
@@ -208,12 +212,31 @@ function Main(){
 
                 if(message.type === "player-position"){
                     let isAuthenticated = this.verificationMap[`${socket.id}`];
+                    let currentPlayerPosition = message.payload;
                     if(isAuthenticated){
                         this.state[`${playerRoom}`] = {
                             [socket.id]: {
                                 "portalId": playerRoom,
-                                "player-position": {
-                                    ...message.payload
+                                "player-position": currentPlayerPosition,
+                            }
+                        };
+                        this.stateInternal[`${playerRoom}`] = {
+                            [socket.id]: {
+                                "portalId": playerRoom,
+                                "player-position": currentPlayerPosition,
+                                history: {
+                                    ...(()=>{
+                                        if(
+                                            !!this.stateInternal[`${playerRoom}`]
+                                            && !!this.stateInternal[`${playerRoom}`][socket.id]
+                                            && !!this.stateInternal[`${playerRoom}`][socket.id].history
+                                        ){
+                                            return this.stateInternal[`${playerRoom}`][socket.id].history;
+                                        } else {
+                                            return {}
+                                        }
+                                    })(),
+                                    [this.serverTickCount]: currentPlayerPosition
                                 }
                             }
                         };
