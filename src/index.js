@@ -123,6 +123,7 @@ function Main(){
                         io.to(room).emit("server-state", {
                             type: "state",
                             ts: performance.now(),
+                            serverTickCount: this.serverTickCount,
                             payload: this.state[`${playerRoom}`]
                         })
                     })
