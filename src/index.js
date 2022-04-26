@@ -111,6 +111,7 @@ function Main(){
         this.roomMap = {}
         this.madaxGameState = null;
         this.serverTickCount = 0;
+        this.maxHistorySize = 100;
 
         setInterval(() => {
             this.serverTickCount = this.serverTickCount + 1;
@@ -220,24 +221,42 @@ function Main(){
                                 "player-position": currentPlayerPosition,
                             }
                         };
+                        const getHistory = ()=>{
+                            if(
+                                !!this.stateInternal[`${playerRoom}`]
+                                && !!this.stateInternal[`${playerRoom}`][socket.id]
+                                && !!this.stateInternal[`${playerRoom}`][socket.id].history
+                            ){
+                                let prevHistoryKeys = Object.keys(this.stateInternal[`${playerRoom}`][socket.id].history);
+                                if(prevHistoryKeys.length < this.maxHistorySize){
+                                    return this.stateInternal[`${playerRoom}`][socket.id].history;
+                                } else {
+                                    prevHistoryKeys = prevHistoryKeys.sort();
+                                    let cappedHistoryKeys = prevHistoryKeys.slice(
+                                        prevHistoryKeys.length - this.maxHistorySize,
+                                        prevHistoryKeys.length
+                                    )
+                                    let cappedHistory = cappedHistoryKeys.reduce((acc, curr) => {
+                                        acc[curr] = this.stateInternal[`${playerRoom}`][socket.id].history[curr]
+                                        return acc;
+                                    }, {})
+                                    return cappedHistory;
+                                }
+                            } else {
+                                return {}
+                            }
+                            return {}
+                        };
+                        let newHistory = getHistory();
                         this.stateInternal[`${playerRoom}`] = {
                             [socket.id]: {
                                 "portalId": playerRoom,
                                 "player-position": currentPlayerPosition,
                                 history: {
-                                    ...(()=>{
-                                        if(
-                                            !!this.stateInternal[`${playerRoom}`]
-                                            && !!this.stateInternal[`${playerRoom}`][socket.id]
-                                            && !!this.stateInternal[`${playerRoom}`][socket.id].history
-                                        ){
-                                            return this.stateInternal[`${playerRoom}`][socket.id].history;
-                                        } else {
-                                            return {}
-                                        }
-                                    })(),
+                                    ...newHistory,
                                     [this.serverTickCount]: currentPlayerPosition
-                                }
+                                },
+                                historySize: Object.keys(newHistory).length + 1
                             }
                         };
                     }
