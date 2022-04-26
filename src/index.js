@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+let turf = require('@turf/turf');
 
 require('dotenv').config()
 const express = require("express");
@@ -65,6 +66,41 @@ function Portals(){
 function Main(){
     this.sockets = {};
     this.portals = new Portals();
+    this.hasPortalAccess = function (portalToken){
+        ll.debug(`verify portal access`, {
+            portalToken,
+            madaxGameState: this.madaxGameState
+        });
+        let playerAddress = portalToken.address;
+        let madaxGameState = this.madaxGameState;
+
+        // portalToken.portalData.land.features[0].properties
+
+        Object.keys(madaxGameState.playerItems).forEach(key => {
+            let playerPosition = madaxGameState.playerPositions[`${playerAddress}`].position;
+            madaxGameState.playerItems[`${key}`].land.forEach(land => {
+                // control if the player is inside that land
+                let polygon = turf.polygon(land.features[0].geometry.coordinates);
+                if (turf.booleanIntersects(turf.point([playerPosition.lng, playerPosition.lat]), polygon)) {
+                    // the player is inside the land (accesspolicy ok)
+                    let landLabel = land.features[0].properties[`label`];
+                    ll.debug(`the player ${playerAddress} is inside the land ${landLabel}`, {
+                        land,
+                        playerAddress,
+                        playerPosition
+                    });
+                } else {
+                    let landLabel = land.features[0].properties[`label`];
+                    // the player is not inside the land (accesspolicy not ok)
+                    ll.debug(`the player ${playerAddress} is not inside the land ${landLabel}`, {
+                        land,
+                        playerAddress,
+                        playerPosition
+                    });
+                }
+            })
+        });
+    }
     this.run = function (){
         this.portals.add("global");
         this.fps = 60;
@@ -78,19 +114,16 @@ function Main(){
             Object.keys(this.sockets).forEach(socketId => {
                let socket = this.sockets[`${socketId}`];
                 let playerRoom = this.roomMap[`${socket.id}`];
-                socket.rooms.forEach(room => {
-                    io.to(room).emit("server-state", {
-                        type: "state",
-                        payload: this.state
+                if(playerRoom){
+                    socket.rooms.forEach(room => {
+                        io.to(room).emit("server-state", {
+                            type: "state",
+                            ts: performance.now(),
+                            payload: this.state[`${playerRoom}`]
+                        })
                     })
-                })
+                }
             });
-            /*Object.keys(this.portals.getPortals()).forEach(portal => {
-                io.to(portal).emit("server-state", {
-                    type: "state",
-                    payload: this.state
-                })
-            })*/
         }, 1000/this.fps)
 
         // connect to the game server
@@ -119,7 +152,8 @@ function Main(){
                     let address = this.madaxGameState.playerItems[`${key}`].address;
                     this.madaxGameState.playerItems[`${key}`].land.forEach(land => {
                         let landLabel = land.features[0].properties.label;
-                        allPortals.push(`${landLabel}:${address}`)
+                        let accessPolicy = land.features[0].properties.accessPolicy ?? "public";
+                        allPortals.push(`${landLabel}:${address}:${accessPolicy}`)
                     })
                 });
                 allPortals.forEach(portal => {
@@ -130,8 +164,9 @@ function Main(){
 
             socket.on("disconnect", () => {
                 ll.debug(`socket ${socket.id}: disconnect (left rooms ${JSON.stringify(socket.rooms)})`);
+                let playerRoom = this.roomMap[`${socket.id}`];
                 delete this.sockets[socket.id];
-                delete this.state[socket.id];
+                delete this.state[playerRoom][socket.id];
                 delete this.portalTokens[socket.id];
                 delete this.verificationMap[socket.id];
                 ll.debug(`socket ${socket.id}: ${Object.keys(this.sockets).length} connections active`);
@@ -147,13 +182,15 @@ function Main(){
                     })
                 })
             })
+
             socket.on("join", (...args) => {
                 let isAuthenticated = this.verificationMap[`${socket.id}`];
                 if(isAuthenticated && this.portals.getPortals()[args[0]]){
                     let rooms = socket.rooms;
-                    this.roomMap[`${socket.id}`] = null;
                     rooms.forEach(room => {
-                        ll.debug(`socket ${socket.id}: leaving room ${room}`);
+                        let playerRoom = this.roomMap[`${socket.id}`];
+                        ll.debug(`socket ${socket.id}: leaving socket room ${room} / ${playerRoom}`);
+                        this.roomMap[`${socket.id}`] = null;
                         socket.leave(room);
                     })
                     ll.debug(`socket ${socket.id}: joining room ${args[0]}`);
@@ -172,10 +209,12 @@ function Main(){
                 if(message.type === "player-position"){
                     let isAuthenticated = this.verificationMap[`${socket.id}`];
                     if(isAuthenticated){
-                        this.state[`${socket.id}`] = {
-                            "player-position": {
-                                ...message.payload,
-                                room: playerRoom
+                        this.state[`${playerRoom}`] = {
+                            [socket.id]: {
+                                "portalId": playerRoom,
+                                "player-position": {
+                                    ...message.payload
+                                }
                             }
                         };
                     }
@@ -209,6 +248,7 @@ function Main(){
                         if(response.verifies){
                             ll.debug(`socket ${gameAuthorizerServerSocket.id}: api:verify - ok`, response.verifies);
                             this.verificationMap[`${socket.id}`] = true;
+                            this.hasPortalAccess(portalToken);
                         } else {
                             ll.debug(`socket ${gameAuthorizerServerSocket.id}: api:verify - not ok`, response.verifies);
                             this.verificationMap[`${socket.id}`] = false;
