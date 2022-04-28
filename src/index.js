@@ -103,7 +103,7 @@ function Main(){
     }
     this.run = function (){
         this.portals.add("global");
-        this.fps = 60;
+        this.ticksPerSecond = 60;
         this.state = {}
         this.stateInternal = {}
         this.portalTokens = {}
@@ -111,7 +111,9 @@ function Main(){
         this.roomMap = {}
         this.madaxGameState = null;
         this.serverTickCount = 0;
-        this.maxHistorySize = 100;
+        this.maxHistorySize = 20;
+
+        ll.debug(`portal game server running: ${JSON.stringify(this)}`);
 
         setInterval(() => {
             this.serverTickCount = this.serverTickCount + 1;
@@ -129,7 +131,7 @@ function Main(){
                     })
                 }
             });
-        }, 1000/this.fps)
+        }, 1000/this.ticksPerSecond)
 
         // connect to the game server
         ll.debug(`connecting to game authorizer server`, process.env.GAME_AUTHORIZER_SERVER);
@@ -171,8 +173,10 @@ function Main(){
                 ll.debug(`socket ${socket.id}: disconnect (left rooms ${JSON.stringify(socket.rooms)})`);
                 let playerRoom = this.roomMap[`${socket.id}`];
                 delete this.sockets[socket.id];
-                delete this.state[playerRoom][socket.id];
-                delete this.stateInternal[playerRoom][socket.id];
+                if(playerRoom){
+                    delete this.state[playerRoom][socket.id];
+                    delete this.stateInternal[playerRoom][socket.id];
+                }
                 delete this.portalTokens[socket.id];
                 delete this.verificationMap[socket.id];
                 ll.debug(`socket ${socket.id}: ${Object.keys(this.sockets).length} connections active`);
