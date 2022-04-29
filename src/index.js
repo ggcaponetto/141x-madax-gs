@@ -103,7 +103,7 @@ function Main(){
     }
     this.run = function (){
         this.portals.add("global");
-        this.ticksPerSecond = 60;
+        this.ticksPerSecond = 120;
         this.state = {}
         this.stateInternal = {}
         this.portalTokens = {}
