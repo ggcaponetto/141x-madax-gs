@@ -302,6 +302,41 @@ function Main(){
                         }
                         callback();
                     });
+                } else if(message.type === "chat"){
+                    ll.debug(`socket ${socket.id}: got chat message`, message);
+                    let isAuthenticated = this.verificationMap[`${socket.id}`];
+                    let currentPlayerPosition = message.payload;
+                    if(isAuthenticated){
+                        // the chat message is authenticated
+                        let playerRoom = this.roomMap[`${socket.id}`];
+                        let portalToken = this.portalTokens[`${socket.id}`];
+                        let playerAddress = portalToken.address;
+                        if(playerRoom){
+                            ll.debug(`socket ${socket.id}: got chat message - authentication ok`, {
+                                message, playerRoom
+                            });
+                            socket.rooms.forEach(room => {
+                                if(room === playerRoom){
+                                    ll.debug(`socket ${socket.id}: got chat message - authentication ok - emitting`, {
+                                        message, playerRoom
+                                    });
+                                    io.to(room).emit("chat", {
+                                        type: "state",
+                                        payload: {
+                                            message: {
+                                                text: message.payload.message,
+                                                serverTickCount: this.serverTickCount,
+                                                playerAddress
+                                            }
+                                        }
+                                    })
+                                }
+                            })
+                        }
+                    }
+                    callback({
+                        isAuthenticated
+                    });
                 }
             })
         });
