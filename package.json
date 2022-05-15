@@ -22,7 +22,7 @@
   "dependencies": {
     "@turf/turf": "^6.5.0",
     "axios": "^0.24.0",
-    "chalk": "^5.0.0",
+    "cha lk": "^5.0.0",
     "cross-env": "^7.0.3",
     "dotenv": "^10.0.0",
     "express": "^4.17.3",
